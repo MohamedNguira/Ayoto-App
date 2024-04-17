@@ -66,22 +66,24 @@ class ProfileDetails {
 class ProfileService{
 
   Future<http.Response?>? getProfile(Function f) async {
-  String url = "https://diagnosis-app-ob5xb.ondigitalocean.app";
-  var answer = await http.get(
-  Uri.parse('https://api.ayoto.health/auth/profile/current-profile'),
+    log("current-profile token: " + MyHomePageState.token);
 
-  headers: <String, String>{
-  'Content-Type': 'application/json; charset=UTF-8',
-    'Authorization': 'Bearer ' + MyHomePageState.token
-  },
-  );
-  print(answer.body);
-  if(answer.statusCode == 200) {
-    var decoded = jsonDecode(answer.body);
-    ProfileDetails details = ProfileDetails.fromJson(decoded);
-    f(details);
-  }
-  return null;
+    var answer = await http.get(
+    Uri.parse('https://api.ayoto.health/auth/profile/current-profile'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer ' + MyHomePageState.token
+      },
+    );
+
+    log("current-profile body: " + answer.body);
+    log("current-profile code: " + answer.statusCode.toString());
+    if(answer.statusCode == 200) {
+      var decoded = jsonDecode(answer.body);
+      ProfileDetails details = ProfileDetails.fromJson(decoded);
+      f(details);
+    }
+    return null;
   }
 
   }

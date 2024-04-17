@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:ayoto/ChatChoosingScreen.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
@@ -14,6 +15,12 @@ import 'MyHeader.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:intl/intl.dart';
+
+import 'dart:developer';
+
+import 'CalendarScreen.dart';
+import 'ChoosingScreen.dart';
+import 'ServerCreateChat.dart';
 
 
 double fem = 0.92;
@@ -53,6 +60,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: "Ayoto",
       home: MyHomePage(title: 'Ayoto Home Page'),
       theme: ThemeData(
@@ -84,23 +92,25 @@ class MyHomePage extends StatefulWidget {
 
 
 Future<String> fetchUpcomingAppointments(userId) async {
+  String body = '{"userId": "' + userId + '"}';
+  log("fetchUpcomingAppointments in main body: " + body);
+
   final response = await http.post(Uri.parse('https://api.ayoto.health/dataserver/appointments?includePast=false&includeFuture=true'),
       //body: '{"infermedicaId": "sp_12", "startDate": "2023-07-12", "endDate": "2023-07-15"}',
-      body: '{"userId": "' + userId + '"}',
+      body: body,
       headers: {
         "Content-Type": "application/json"
       }
   );
 
 
-  print(response);
-  print(response.statusCode);
-  print(response.body);
+  log("fetchUpcomingAppointments in main response: " + response.body);
+  log("fetchUpcomingAppointments in main code: " + response.statusCode.toString());
 
   if (response.statusCode == 200) {
     // If the server did return a 200 OK response,
     // then parse the JSON.
-    print(response.body);
+    //print(response.body);
     return response.body;
   } else {
     // If the server did not return a 200 OK response,
@@ -114,8 +124,9 @@ class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   late Future<String> futureUpcomingAppointments;
   late final TabController _tabController;
 
-  static int state = 0; //0;//0: Signup, 1: Login, 2: mainview
-  static String token = "", userid = "";
+  static int state = 2; //0: Signup, 1: Login, 2: mainview
+  static String token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNTU4MGY0OC0xNmU3LTQ3ZDItYmQzMi0xNDdhNzZiYTg4M2UiLCJpYXQiOjE2OTQ2MDcyMTgsImV4cCI6MTY5NDYyMTYxOH0.ekeHztp1yDWp0m7XmfsSfGxWyQUe0sP6iGJ99urftYs",
+      userid = "25580f48-16e7-47d2-bd32-147a76ba883e";
   void putloginscreen(){
     setState(() {
       state = 1;
@@ -130,10 +141,20 @@ class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     setState(() {
       state = 2;
 
+      //userid = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+      //token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3MjA1Y2FjNC1hZTlhLTQ4ZjEtYWUyOC05OGI1NDA4ZDNlNjgiLCJwYXRpZW50IjoiM2M3NjRkN2ItOTZmNy00M2EzLWIzZGYtOGE1MTMwYzY5NDUyIiwiaWF0IjoxNjg5MTgyMDkyLCJleHAiOjE2ODkxOTY0OTJ9.F1D3kSjRDUxgLphSUwdW1EAlqGgtcAlO7gKGxBnWz_E";
+
       futureUpcomingAppointments = fetchUpcomingAppointments(userid);
     });
   }
 
+/*
+  void reloadUpcomingAppointments() {
+    setState(() {
+      futureUpcomingAppointments = fetchUpcomingAppointments(userid);
+    });
+  }
+ */
 
 
   @override
@@ -659,7 +680,18 @@ class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                 List<dynamic> json = jsonDecode(snapshot.data!);
 
                 if (json.length == 0) {
-
+                  return Container( //Okay should be good with the textbutton default height
+                    padding: EdgeInsets.fromLTRB(27, 0, 27, 0),
+                    child: Text(
+                      "You do not have upcoming appointments.",
+                      style: TextStyle(
+                        color: Color(0xFF152D37),
+                        fontSize: 16,
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  );
                 }
 
                 //Copy paste from 3rd screen
@@ -1264,7 +1296,9 @@ class RoundedBottomAppBar extends StatelessWidget {
                 ),
                 IconButton(
                   icon: Image.asset("assets/images/Calendar_duotone.png", height: 30, width: 30),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(context,MaterialPageRoute(builder: (context) => CalendarScreen(token: token)));
+                  },
                 ),
                 IconButton(
                   icon: Image.asset("assets/images/Group 82.png"),
@@ -1274,12 +1308,17 @@ class RoundedBottomAppBar extends StatelessWidget {
                 IconButton(
                   icon: Image.asset("assets/images/Message.png", height: 30, width: 30),
                   onPressed: () {
-                    Navigator.push(context,MaterialPageRoute(builder: (context) => ChatScreen(token: token)));
+                    Navigator.push(context,MaterialPageRoute(builder: (context) => ChatChoosingScreen(token: token)));
                   },
                 ),
                 IconButton(
                   icon: Image.asset("assets/images/setting.png"),
-                  onPressed: () {},
+                  onPressed: () {
+                    Query q = Query(complete: true);
+                    q.specialization = "sp_12";
+                    ChoosingScreenState.query = q;
+                    Navigator.push(context,MaterialPageRoute(builder: (context) => ChoosingScreen()));
+                  },
                 ),
               ],
             ),

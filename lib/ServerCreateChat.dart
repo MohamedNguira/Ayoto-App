@@ -4,6 +4,7 @@ import 'package:ayoto/ChoosingScreen.dart';
 import 'package:ayoto/main.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'dart:developer';
 
 class ChatCreator {
   String? message;
@@ -27,26 +28,31 @@ class ChatHandler{
   final String token;
 
   Future<http.Response?>? createchat(String msg,Function f) async {
-    print(token);
+    //print(token);
+
+    log("createchat token: " + token);
 
     var map = <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
             'Authorization': 'Bearer ' + token
           };
 
-    print(map);
+    //print("createchat headers");
+    //print(map);
 
     var thisJson = jsonEncode(ChatCreator(message: msg).toJson());
 
-    print(thisJson);
+    log("createchat body: " + thisJson);
 
-    String url = "https://diagnosis-app-ob5xb.ondigitalocean.app";
     var answer = await http.post(
       Uri.parse('https://api.ayoto.health/diagnosis/create-chat'),
       headers: map,
       body: thisJson,
     );
-    print(answer.body);
+
+    log("createchat response: " + answer.body);
+    log("createchat code: " + answer.statusCode.toString());
+
     var decoded = jsonDecode(answer.body);
     Query q = Query.fromJson(decoded);
 
@@ -59,9 +65,10 @@ class ChatHandler{
   }
 
   Future<http.Response?>? submitevidence(SubmitEvidence evidence,Function f) async {
-    String url = "https://diagnosis-app-ob5xb.ondigitalocean.app";
+    String body = jsonEncode(evidence.toJson());
 
-    print(token);
+    log("submitevidence token: " + token);
+    log("submitevidence body: " + body);
 
     var answer = await http.post(
       Uri.parse('https://api.ayoto.health/diagnosis/submit-evidence'),
@@ -69,13 +76,19 @@ class ChatHandler{
         'Content-Type': 'application/json; charset=UTF-8',
         'Authorization': 'Bearer ' + token
       },
-      body: jsonEncode(evidence.toJson()),
+      body: body,
     );
-    print(answer.body);
+
+    log("submitevidence response: " + answer.body);
+    log("submitevidence code: " + answer.statusCode.toString());
+
     var decoded = jsonDecode(answer.body);
     Query q = Query.fromJson(decoded);
 
     if(q.complete) {
+      if(q.recommendedChannel == "The symptoms are mild and doesnt' need any medical attention. You can take care of yourself at home."){
+          ChatScreenState.noneed = true;
+      }
       ChatScreenState.finished = true;
       ChoosingScreenState.query = q;
     }

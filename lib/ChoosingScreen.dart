@@ -13,6 +13,8 @@ import 'package:intl/intl.dart';
 
 import 'ServerCreateChat.dart';
 
+import 'dart:developer';
+
 
 
 String capitalizeWords(String input) {
@@ -59,9 +61,12 @@ Future<String> fetchUpcomingAppointments(String specialization) async {
 
 
   //GOOD REQUEST TO THE ACTUAL SERVER
+  String body = '{"infermedicaId": "' + specialization + '", "startDate": "2023-09-14", "endDate": "2023-09-17"}';
+  log("fetchUpcomingAppointments in ChoosingScreen body: " + body);
+
   final response = await http.post(Uri.parse('https://api.ayoto.health/dataserver/possibleAppointments'),
       //body: '{"infermedicaId": "sp_12", "startDate": "2023-07-12", "endDate": "2023-07-15"}',
-      body: '{"infermedicaId": "' + specialization + '", "startDate": "2023-07-12", "endDate": "2023-07-15"}',
+      body: body,
       headers: {
         "Content-Type": "application/json"
       }
@@ -77,14 +82,13 @@ Future<String> fetchUpcomingAppointments(String specialization) async {
   //final response = await http
   //        .get(Uri.parse('https://www.jsonkeeper.com/b/OEO1'));
 
-  print(response);
-  print(response.statusCode);
-  print(response.body);
+  log("fetchUpcomingAppointments in ChoosingScreen response: " + response.body);
+  log("fetchUpcomingAppointments in ChoosingScreen code: " + response.statusCode.toString());
 
   if (response.statusCode == 200) {
     // If the server did return a 200 OK response,
     // then parse the JSON.
-    print(response.body);
+    //print(response.body);
     return response.body;
   } else {
     // If the server did not return a 200 OK response,
@@ -177,7 +181,7 @@ class ChoosingScreenState extends State<ChoosingScreen> {
         height: 48, //...USING WRAPPER
         margin: EdgeInsets.fromLTRB(27, 0, 27, 10),
         child: ElevatedButton(
-          onPressed: () {
+          onPressed: (activeDoctorPageIndex == -1 || activeDoctorTileIndex == -1) ? null : () {
             //dynamic thisPage = json[activeDoctorPageIndex];
             //dynamic thisAppointment = thisPage["data"][activeDoctorTileIndex]
             //PossibleAppointmentData("High", thisPage["doctorName"])
@@ -206,12 +210,12 @@ class ChoosingScreenState extends State<ChoosingScreen> {
               fontSize:  16,
               fontWeight:  FontWeight.w500,
               height:  1.1,
-              color:  Color(0xffffffff),
+              color:  (activeDoctorPageIndex == -1 || activeDoctorTileIndex == -1) ? Color(0xff2596be) : Color(0xffffffff),
             ),
           ),
           style: ButtonStyle(
             //maximumSize: MaterialStateProperty.all(Size(130, 31)),
-            backgroundColor: MaterialStateProperty.all<Color>(Color(0xff577df5)),
+            backgroundColor: MaterialStateProperty.all<Color>((activeDoctorPageIndex == -1 || activeDoctorTileIndex == -1) ? Color(0xffdcdcdc) : Color(0xff577df5)),
             elevation: MaterialStateProperty.all(0),
             shape: MaterialStateProperty.all<RoundedRectangleBorder>(
               RoundedRectangleBorder(
@@ -283,6 +287,21 @@ class ChoosingScreenState extends State<ChoosingScreen> {
               if (snapshot.hasData) {
                 //return Text(snapshot.data!.title);
                 json = jsonDecode(snapshot.data!);
+
+                if (json.length == 0) {
+                  return Container( //Okay should be good with the textbutton default height
+                    padding: EdgeInsets.fromLTRB(27, 0, 27, 0),
+                    child: Text(
+                      "There is no available doctors for this week.",
+                      style: TextStyle(
+                        color: Color(0xFF152D37),
+                        fontSize: 16,
+                        fontFamily: 'Outfit',
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  );
+                }
 
                 int maxNumOfDoctorsOnSingleDay = 0;
                 for (int i = 0; i < json.length; i++) {

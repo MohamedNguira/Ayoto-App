@@ -5,6 +5,9 @@ import 'package:ayoto/main.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:developer';
+import 'package:jwt_decoder/jwt_decoder.dart';
+
+
 class SignUpRequest {
   String? name;
   String? email;
@@ -74,18 +77,21 @@ class LoginReceived {
 }
 class AuthHandler{
   Future<http.Response?>? signup(SignUpRequest s, ProfileCreation pc,Function success,Function error) async {
-    //String url = "https://api.ayoto.health/auth/";
-    print(jsonEncode(s.toJson()));
+    String body = jsonEncode(s.toJson());
+
+    log("signup body: " + body);
 
     var answer = await http.post(
       Uri.parse('https://api.ayoto.health/auth/register'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },
-      body: jsonEncode(s.toJson()),
+      body: body,
     );
-    log(answer.body);
-    log(answer.statusCode.toString());
+
+    log("signup response: " + answer.body);
+    log("signup code: " + answer.statusCode.toString());
+
     var decoded = jsonDecode(answer.body);
     if(answer.statusCode == 201){
       String userid = decoded["user_id"];
@@ -100,8 +106,10 @@ class AuthHandler{
         },
         body: answer.body,
       );
-      log(answer.body);
-      log(answer.statusCode.toString());
+
+      log("signup confirm response: " + answer.body);
+      log("signup confirm code: " + answer.statusCode.toString());
+
       if(answer.statusCode == 200){
         await login(LoginRequest(identifier: s.phone,password: s.password), success, error);
         await createprofile(pc, success, error);
@@ -116,7 +124,9 @@ class AuthHandler{
   Future<http.Response?>? createprofile(ProfileCreation pc, Function success,Function error) async {
     //String url = "https://api.ayoto.health/auth/";
 
-    print(jsonEncode(pc.toJson()));
+    String body = jsonEncode(pc.toJson());
+
+    log("signup body: " + body);
 
     var answer = await http.post(
       Uri.parse('https://api.ayoto.health/auth/profile/create'),
@@ -124,10 +134,12 @@ class AuthHandler{
         'Content-Type': 'application/json; charset=UTF-8',
         'Authorization': 'Bearer ' + MyHomePageState.token
       },
-      body: jsonEncode(pc.toJson()),
+      body: body,
     );
-    log(answer.body);
-    log(answer.statusCode.toString());
+
+    log("createprofile response: " + answer.body);
+    log("createprofile code: " + answer.statusCode.toString());
+
     var decoded = jsonDecode(answer.body);
     LoginReceived l = LoginReceived.fromJson(decoded);
     if(answer.statusCode == 201){
@@ -140,21 +152,32 @@ class AuthHandler{
     return answer;
   }
   Future<http.Response?>? login(LoginRequest s, Function success,Function error) async {
-    String url = "https://api.ayoto.health/auth/";
-    print(jsonEncode(s.toJson()));
+    String body = jsonEncode(s.toJson());
+
+    log("login body: " + body);
+
     var answer = await http.post(
       Uri.parse('https://api.ayoto.health/auth/login'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },
-      body: jsonEncode(s.toJson()),
+      body: body,
     );
-    log(answer.body);
+
+    log("login response: " + answer.body);
+    log("login code: " + answer.statusCode.toString());
+
     var decoded = jsonDecode(answer.body);
     if(answer.statusCode == 200){
       LoginReceived l = LoginReceived.fromJson(decoded);
-      success();
       MyHomePageState.token = l.token!;
+
+      Map<String, dynamic> decodedToken = JwtDecoder.decode(l.token!);
+      print("decodedToken: ");
+      print(decodedToken);
+      MyHomePageState.userid = decodedToken["sub"];
+
+      success();
 
     }else {
       log("ERROR" + answer.statusCode.toString());

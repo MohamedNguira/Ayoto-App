@@ -18,6 +18,8 @@ class ChatScreen extends StatefulWidget {
 class ChatScreenState extends State<ChatScreen> {
   late Query query;
   static bool finished = false;
+  static bool noneed = false;
+  String msg = '';
   @override
   void initState() {
     finished = false;
@@ -33,6 +35,7 @@ class ChatScreenState extends State<ChatScreen> {
         suggestions.add(evidences.label!);
       }
       Chatboxes.add(createChatBox(query.question!.label, false, suggestions,f));
+      _scrollDown();
   }
   void chooseChoice(int i,Function f){
 
@@ -49,7 +52,23 @@ class ChatScreenState extends State<ChatScreen> {
     ChatHandler(token: widget.token).submitevidence(evidence, f);
   }
   List<Widget> Chatboxes = [];
+  String convertmsg(String s){
+    String msg = "";
+    int j = 0;
+    for(int i = 0;i<s.length;i++){
+      j++;
+      if(j > 20 && s[i] == ' '){
+        msg += '\n';
+        j = 0;
+      }else {
+        msg += s[i];
+      }
+    }
+    return msg;
+  }
+  TextEditingController controller = TextEditingController();
   Widget createChatBox(String ?msg, bool mine, List<String> suggestions,Function f){
+    msg = convertmsg(msg!);
     if(suggestions.length == 1){
       suggestions = ["Yes" , "No"];
     }
@@ -57,7 +76,6 @@ class ChatScreenState extends State<ChatScreen> {
       return SizedBox(width: 345,child:
       Align(alignment: Alignment.centerRight,child:
       Container(
-        width: 200,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         clipBehavior: Clip.antiAlias,
         decoration: ShapeDecoration(
@@ -90,7 +108,6 @@ class ChatScreenState extends State<ChatScreen> {
       Widget w = SizedBox(width: 345,child:
       Row(mainAxisAlignment: MainAxisAlignment.start, crossAxisAlignment: CrossAxisAlignment.start,children: [Image.asset("assets/logo.png",scale: 13,),SizedBox(width: 10,),
         Container(
-          width: 200,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           clipBehavior: Clip.antiAlias,
           decoration: ShapeDecoration(
@@ -126,8 +143,9 @@ class ChatScreenState extends State<ChatScreen> {
       else {
         List<Widget> buttons = [];
         int i = 0;
-        for(String s in suggestions){
-
+        for(String s0 in suggestions){
+          print(s0);
+          String s = s0.replaceAll(RegExp('[Â]'), "");
           buttons.add(TextButton(onPressed: (){
             Chatboxes.add(createChatBox(s, true, [],(){setState(() {});}));
             f();
@@ -179,9 +197,44 @@ class ChatScreenState extends State<ChatScreen> {
   }
 
 
+  final ScrollController _controller = ScrollController();
 
+// This is what you're looking for!
+  void _scrollDown() {
+    _controller.jumpTo(_controller.position.maxScrollExtent);
+  }
+
+  Future<void> _showMyDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Diagnosis complete'),
+          content: const SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text("You don't need medical intervention, you can heal at home"),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Return to home'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
   @override
   Widget build(BuildContext context) {
+    if(noneed){
+      _showMyDialog();
+    }
     Widget buttonToThe3rdScreen = Container(
       height: 48, //...USING WRAPPER
       margin: EdgeInsets.fromLTRB(27, 0, 27, 10),
@@ -213,11 +266,15 @@ class ChatScreenState extends State<ChatScreen> {
     );
 
 
-    Widget textInputField = TextField(onSubmitted: (String msg) {
+    Widget textInputField = TextField(
+      controller: controller,
+      onChanged: (String s){this.msg = s;},
+      onSubmitted: (String msg) {
+        if(msg.isEmpty)return;
       setState(() {
         Chatboxes.add(createChatBox(msg, true, [], () {
           setState(() {
-
+            controller.clear();
           });
         }));
         ChatHandler(token: widget.token).createchat(msg, (Query q) {
@@ -240,8 +297,29 @@ class ChatScreenState extends State<ChatScreen> {
         fillColor: Colors.white,
         filled: true,
         hintText: "Type a message...",
-        suffixIcon: Icon(Icons.mic),
-        iconColor: Color(0xFF577DF5)),
+        suffixIcon: TextButton(onPressed: (){
+            if(msg.isEmpty)return;
+            setState(() {
+              Chatboxes.add(createChatBox(msg, true, [], () {
+                setState(() {
+                  controller.clear();
+                });
+              }));
+              ChatHandler(token: widget.token).createchat(msg, (Query q) {
+                setState(() {
+                  this.query = q;
+                  addQuery(() {
+                    setState(() {
+
+                    });
+                  });
+                });
+              });
+              controller.clear();
+              print("hi");
+            });
+        }, child: Icon(Icons.send,)),
+        suffixIconColor: Color(0xFF577DF5)),
     );
 
 
@@ -253,9 +331,17 @@ class ChatScreenState extends State<ChatScreen> {
       Navigator.push(context, MaterialPageRoute(builder: (context) => const ChoosingScreen())));
     }*/
     // ignore: prefer_const_constructors
+    List<Widget> boxes = [];
+    for(Widget w in Chatboxes){
+      boxes.add(w);
+      boxes.add(SizedBox(height: 20,));
+    }
     return Scaffold(
       backgroundColor: const Color.fromRGBO(0xf5, 0xf7, 0xff, 1),
-        body: SingleChildScrollView(child: Center(child: SizedBox(width: 345, child:
+        body: SingleChildScrollView(
+
+
+            child: Center(child: SizedBox(width: 345, child:
           Column(children: [SizedBox(height: 40, ),
 
             Row(children: [
@@ -275,8 +361,8 @@ class ChatScreenState extends State<ChatScreen> {
             SizedBox(height: 500,
                 child: Align(
                   alignment: Alignment.bottomCenter,
-                  child: SingleChildScrollView(
-                    child: Column(children: Chatboxes, ),
+                  child: SingleChildScrollView(controller: _controller,
+                    child: Column(children: boxes, ),
                   ),
                 )
             ),

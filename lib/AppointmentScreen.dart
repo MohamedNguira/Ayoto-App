@@ -12,6 +12,10 @@ import 'package:intl/intl.dart';
 
 import 'package:http/http.dart' as http;
 
+import 'package:ayoto/main.dart';
+
+import 'dart:developer';
+
 
 
 
@@ -137,7 +141,7 @@ class MyAlertState extends State<MyAlert>{
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(isLoading ? 'Booking in process...' : (successfullyLoaded ? "Booked!" : "Error while booking"),
+      title: Text(isLoading ? 'Booking in process...' : (successfullyLoaded ? "Booked Successfully!" : "Error while booking"),
         style: TextStyle(
           fontFamily: 'Outfit',
           //fontSize:  16,
@@ -146,7 +150,7 @@ class MyAlertState extends State<MyAlert>{
           color:  Color(0xff152d37),
         )
       ),
-      content: AlertAJAXContent(doctorId: widget.doctorId, start: widget.start, finish: widget.finish, updateData: _updateData)
+      content: AlertAJAXContent(userId: MyHomePageState.userid, doctorId: widget.doctorId, start: widget.start, finish: widget.finish, updateData: _updateData)
     ); //Looks like I can combine two classes by I cannot because I need to update the state of this class only from the parent class
   }
 
@@ -162,33 +166,38 @@ class MyAlertState extends State<MyAlert>{
 
 
 class AlertAJAXContent extends StatelessWidget {
-  AlertAJAXContent({super.key, required this.doctorId, required this.start, required this.finish, required this.updateData});
+  AlertAJAXContent({super.key, required this.userId, required this.doctorId, required this.start, required this.finish, required this.updateData});
 
   final String doctorId;
   final String start;
   final String finish;
   final Function updateData;
 
+  final String userId;
+
 
 
   //Future<String> fetchCreatingAppointment(String doctorId, String start, String finish) async {
   Future<String> fetchCreatingAppointment() async {
     //GOOD REQUEST TO THE ACTUAL SERVER
+    String body = '{"userId": "' + userId + '", "doctorId": "' + doctorId + '", "start": "' + start +  '", "finish": "' + finish +  '"}';
+    log("fetchUpcomingAppointments in AppointmentScreen body: " + body);
+
     final response = await http.post(Uri.parse('https://api.ayoto.health/dataserver/appointment'),
-        body: '{"userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6", "doctorId": "' + doctorId + '", "start": "' + start +  '", "finish": "' + finish +  '"}',
+        body: body,
         headers: {
           "Content-Type": "application/json"
         }
     );
 
-    print(response);
-    print(response.statusCode);
-    print(response.body);
+    log("fetchUpcomingAppointments in AppointmentScreen response: " + response.body);
+    log("fetchUpcomingAppointments in AppointmentScreen code: " + response.statusCode.toString());
 
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
       // then parse the JSON.
-      print(response.body);
+      //print(response.body);
+      //MyHomePageState.reloadUpcomingAppointments();
       return response.body;
     } else if (response.statusCode == 409) {
       throw Exception('This timeslot is already booked');
@@ -207,7 +216,7 @@ class AlertAJAXContent extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           updateData(false, true);
-          return Text(snapshot.data!,
+          return Text("",
             style: TextStyle(
               fontFamily: 'Outfit',
               //fontSize:  16,

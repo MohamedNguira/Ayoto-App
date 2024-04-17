@@ -279,6 +279,7 @@ class SignupScreenState extends State<SignupScreen> {
               alignment: Alignment.centerLeft),
               onPressed: () async {
               DateTime? time = await showDatePicker(context: context, initialDate: DateTime.timestamp(), firstDate: DateTime(1900), lastDate: DateTime.timestamp());
+
               setState(() {
                 this.birthdate = time!.toIso8601String().substring(0,10);
                 print(time.toIso8601String());
